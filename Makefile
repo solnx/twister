@@ -10,4 +10,3 @@ validate:
 	@golint ./lib/...
 	@ineffassign cmd/twister/
 	@ineffassign lib/twister/
-	@codecoroner funcs cmd/twister/
