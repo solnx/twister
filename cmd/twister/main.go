@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package main // import "github.com/mjolnir42/twister"
+package main // import "github.com/mjolnir42/twister/cmd/twister"
 
 import (
 	"log"
