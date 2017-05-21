@@ -43,6 +43,14 @@ type Config struct {
 	Twister struct {
 		HandlerQueueLength int `json:"handler.queue.length,string"`
 	} `json:"twister"`
+	// Mistral is the namespace with configuration options relating to
+	// accepting incoming messages via HTTP API
+	Mistral struct {
+		HandlerQueueLength int    `json:"handler.queue.length,string"`
+		ListenAddress      string `json:"listen.address"`
+		ListenPort         string `json:"listen.port"`
+		EndpointPath       string `json:"api.endpoint.path"`
+	} `json:"mistral"`
 }
 
 // FromFile sets Config c based on the file contents
