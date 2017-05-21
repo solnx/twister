@@ -2,7 +2,9 @@ all: validate
 
 validate:
 	@go build ./...
-	@go vet .
+	@go vet ./...
 	@go tool vet -shadow .
-	@golint .
+	@go tool vet -shadow lib/twister/
+	@golint ./...
 	@ineffassign .
+	@ineffassign lib/twister/
