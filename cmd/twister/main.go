@@ -83,12 +83,12 @@ runloop:
 	for {
 		select {
 		case <-c:
-			for i := 0; i < runtime.NumCPU(); i++ {
+			for i := range handlers {
 				close(handlers[i].Shutdown)
 			}
 			break runloop
 		case <-handlerDeath:
-			for i := 0; i < runtime.NumCPU(); i++ {
+			for i := range handlers {
 				close(handlers[i].Shutdown)
 			}
 			break runloop
