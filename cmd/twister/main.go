@@ -33,11 +33,15 @@ func main() {
 	kfkConf := consumergroup.NewConfig()
 	kfkConf.Offsets.Initial = sarama.OffsetNewest
 	kfkConf.Offsets.ProcessingTimeout = 10 * time.Second
-	kfkConf.Offsets.CommitInterval = time.Duration(twConf.Zookeeper.CommitInterval) * time.Millisecond
+	kfkConf.Offsets.CommitInterval = time.Duration(
+		twConf.Zookeeper.CommitInterval,
+	) * time.Millisecond
 	kfkConf.Offsets.ResetOffsets = twConf.Zookeeper.ResetOffset
 
 	var zkNodes []string
-	zkNodes, kfkConf.Zookeeper.Chroot = kazoo.ParseConnectionString(twConf.Zookeeper.Connect)
+	zkNodes, kfkConf.Zookeeper.Chroot = kazoo.ParseConnectionString(
+		twConf.Zookeeper.Connect,
+	)
 
 	consumerTopic := strings.Split(twConf.Kafka.ConsumerTopics, `,`)
 	consumer, err := consumergroup.JoinConsumerGroup(
@@ -61,8 +65,9 @@ func main() {
 
 	for i := 0; i < runtime.NumCPU(); i++ {
 		h := twister.Twister{
-			Num:      i,
-			Input:    make(chan []byte, twConf.Twister.HandlerQueueLength),
+			Num: i,
+			Input: make(chan []byte,
+				twConf.Twister.HandlerQueueLength),
 			Shutdown: make(chan struct{}),
 			Death:    handlerDeath,
 			Config:   &twConf,
