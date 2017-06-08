@@ -38,11 +38,11 @@
 		},
 		{
 			"ImportPath": "github.com/mjolnir42/erebos",
-			"Rev": "2fb5c607f9bf529ccb3402dd95d35cc07c7b75e0"
+			"Rev": "0cff4b366b7682e3443ded4c8aaa70e47e70c467"
 		},
 		{
 			"ImportPath": "github.com/mjolnir42/legacy",
-			"Rev": "91f52e859a2545f1bdec2142a58ffa8136278e76"
+			"Rev": "dfa4f2a71da96b8559b0f372120baf9b5e4b6820"
 		},
 		{
 			"ImportPath": "github.com/nahanni/go-ucl",
@@ -63,6 +63,19 @@
 		{
 			"ImportPath": "github.com/wvanbergen/kazoo-go",
 			"Rev": "968957352185472eacb69215fa3dbfcfdbac1096"
+		},
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.10.0-38-g3ec0642",
+			"Rev": "3ec0642a7fb6488f65b06f9040adc67e3990296a"
+		},
+		{
+			"ImportPath": "github.com/client9/reopen",
+			"Rev": "4b86f9c0ead51cc410d05655596e30f281ed9071"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "9bb9f0998d48b31547d975974935ae9b48c7a03c"
 		}
 	]
 }

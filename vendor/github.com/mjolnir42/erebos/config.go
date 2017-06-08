@@ -13,12 +13,24 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	"github.com/client9/reopen"
 	ucl "github.com/nahanni/go-ucl"
 )
 
 // Config holds the runtime configuration which is expected to be
 // read from a UCL formatted file
 type Config struct {
+	// Log is the namespace for logging options
+	Log struct {
+		// Name of the logfile
+		File string `json:"file"`
+		// Path in wich to open the logfile
+		Path string `json:"path"`
+		// Reopen the logfile if SIGUSR2 is received
+		Rotate bool `json:"rotate.on.usr2,string"`
+		// Handle to the logfile
+		FH *reopen.FileWriter `json:"-"`
+	} `json:"log"`
 	// Zookeeper is the namespace with options for Apache Zookeeper
 	Zookeeper struct {
 		// How often to publish offset updates to Zookeeper
@@ -32,11 +44,17 @@ type Config struct {
 	// Kafka is the namespace with options for Apache Kafka
 	Kafka struct {
 		// Name of the consumergroup to join
-		ConsumerGroup string `json:"kafka.consumer.group.name"`
+		ConsumerGroup string `json:"consumer.group.name"`
 		// Which topics to consume from
-		ConsumerTopics string `json:"kafka.consumer.topics"`
+		ConsumerTopics string `json:"consumer.topics"`
 		// Which topic to produce to
-		ProducerTopic string `json:"kafka.producer.topic"`
+		ProducerTopic string `json:"producer.topic"`
+		// Producer-Response behaviour: NoResponse, WaitForLocal or WaitForAll
+		ProducerResponseStrategy string `json:"producer.response.strategy"`
+		// Producer retry attempts
+		ProducerRetry int `json:"producer.retry.attempts,string"`
+		// Keepalive interval in milliseconds
+		Keepalive int `json:"keepalive.ms,string"`
 	} `json:"kafka"`
 	// Twister is the namespace with configuration options relating to
 	// the splitting of metric batches
@@ -51,6 +69,17 @@ type Config struct {
 		ListenPort         string `json:"listen.port"`
 		EndpointPath       string `json:"api.endpoint.path"`
 	} `json:"mistral"`
+	// DustDevil is the namespace with configuration options relating to
+	// forwarding Kafka read messages to an HTTP API
+	DustDevil struct {
+		HandlerQueueLength int    `json:"handler.queue.length,string"`
+		Endpoint           string `json:"api.endpoint"`
+		RetryCount         int    `json:"post.request.retry.count,string"`
+		RetryMinWaitTime   int    `json:"retry.min.wait.time.ms,string"`
+		RetryMaxWaitTime   int    `json:"retry.max.wait.time.ms,string"`
+		RequestTimeout     int    `json:"request.timeout.ms,string"`
+		StripStringMetrics bool   `json:"strip.string.metrics,string"`
+	} `json:"dustdevil"`
 }
 
 // FromFile sets Config c based on the file contents
