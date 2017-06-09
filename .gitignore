@@ -34,3 +34,6 @@ _testmain.go
 # Dev
 attic/
 /twister
+/cmd/twister/twister
+/cmd/twister/twister.conf
+/cmd/twister/twister.log
