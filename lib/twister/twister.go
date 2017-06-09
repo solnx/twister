@@ -6,72 +6,34 @@
  * that can be found in the LICENSE file.
  */
 
-package twister
+package twister // import "github.com/mjolnir42/twister/lib/twister"
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 	"strconv"
-	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/legacy"
-	kazoo "github.com/wvanbergen/kazoo-go"
 )
+
+// Handlers is the registry of running application handlers
+var Handlers map[int]erebos.Handler
+
+func init() {
+	Handlers = make(map[int]erebos.Handler)
+}
 
 // Twister splits up read metric batches and produces the result
 type Twister struct {
 	Num      int
 	Input    chan []byte
 	Shutdown chan struct{}
-	Death    chan struct{}
+	Death    chan error
 	Config   *erebos.Config
 	dispatch chan<- *sarama.ProducerMessage
 	producer sarama.AsyncProducer
-}
-
-// Start sets up the Twister application
-func (t *Twister) Start() {
-	kz, err := kazoo.NewKazooFromConnectionString(
-		t.Config.Zookeeper.Connect, nil)
-	if err != nil {
-		close(t.Death)
-		<-t.Shutdown
-		return
-	}
-	brokers, err := kz.BrokerList()
-	if err != nil {
-		kz.Close()
-		close(t.Death)
-		<-t.Shutdown
-		return
-	}
-	kz.Close()
-
-	host, err := os.Hostname()
-	if err != nil {
-		close(t.Death)
-		<-t.Shutdown
-		return
-	}
-
-	config := sarama.NewConfig()
-	config.Net.KeepAlive = 5 * time.Second
-	config.Producer.RequiredAcks = sarama.NoResponse
-	config.Producer.Retry.Max = 5
-	config.Producer.Partitioner = sarama.NewHashPartitioner
-	config.ClientID = fmt.Sprintf("twister.%s", host)
-
-	t.producer, err = sarama.NewAsyncProducer(brokers, config)
-	if err != nil {
-		close(t.Death)
-		<-t.Shutdown
-		return
-	}
-	t.dispatch = t.producer.Input()
-	t.run()
 }
 
 // run is the event loop for Twister
@@ -88,8 +50,8 @@ runloop:
 			// received shutdown, drain input channel which will be
 			// closed by main
 			goto drainloop
-		case <-t.producer.Errors():
-			close(t.Death)
+		case err := <-t.producer.Errors():
+			t.Death <- err
 			<-t.Shutdown
 			break runloop
 		case msg := <-t.Input:
@@ -141,8 +103,7 @@ drainloop:
 func (t *Twister) process(msg []byte) {
 	batch := legacy.MetricBatch{}
 	if err := json.Unmarshal(msg, &batch); err != nil {
-		close(t.Death)
-		<-t.Shutdown
+		logrus.Warnf("Ignoring invalid data: %s", err.Error())
 		return
 	}
 
@@ -150,7 +111,7 @@ func (t *Twister) process(msg []byte) {
 	for i := range msgs {
 		data, err := json.Marshal(&msgs[i])
 		if err != nil {
-			close(t.Death)
+			logrus.Warnf("Ignoring invalid data: %s", err.Error())
 			return
 		}
 

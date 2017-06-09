@@ -9,60 +9,70 @@
 package main // import "github.com/mjolnir42/twister/cmd/twister"
 
 import (
+	"flag"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
-	"strings"
+	"syscall"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/Sirupsen/logrus"
+	"github.com/client9/reopen"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/legacy"
 	"github.com/mjolnir42/twister/lib/twister"
-	"github.com/wvanbergen/kafka/consumergroup"
-	kazoo "github.com/wvanbergen/kazoo-go"
 )
 
+func init() {
+	// Discard logspam from Zookeeper library
+	erebos.DisableZKLogger()
+
+	// set standard logger options
+	erebos.SetLogrusOptions()
+}
+
 func main() {
+	// parse command line flags
+	var cliConfPath string
+	flag.StringVar(&cliConfPath, `config`, `twister.conf`,
+		`Configuration file location`)
+	flag.Parse()
+
+	// read runtime configuration
 	twConf := erebos.Config{}
-	if err := twConf.FromFile(`twister.conf`); err != nil {
+	if err := twConf.FromFile(cliConfPath); err != nil {
 		log.Fatalln(err)
 	}
 
-	kfkConf := consumergroup.NewConfig()
-	kfkConf.Offsets.Initial = sarama.OffsetNewest
-	kfkConf.Offsets.ProcessingTimeout = 10 * time.Second
-	kfkConf.Offsets.CommitInterval = time.Duration(
-		twConf.Zookeeper.CommitInterval,
-	) * time.Millisecond
-	kfkConf.Offsets.ResetOffsets = twConf.Zookeeper.ResetOffset
+	// setup logfile
+	if lfh, err := reopen.NewFileWriter(
+		filepath.Join(twConf.Log.Path, twConf.Log.File),
+	); err != nil {
+		logrus.Fatalf("Unable to open logfile: %s", err)
+	} else {
+		twConf.Log.FH = lfh
+	}
+	logrus.SetOutput(twConf.Log.FH)
+	logrus.Infoln(`Starting TWISTER...`)
 
-	var zkNodes []string
-	zkNodes, kfkConf.Zookeeper.Chroot = kazoo.ParseConnectionString(
-		twConf.Zookeeper.Connect,
-	)
-
-	consumerTopic := strings.Split(twConf.Kafka.ConsumerTopics, `,`)
-	consumer, err := consumergroup.JoinConsumerGroup(
-		twConf.Kafka.ConsumerGroup,
-		consumerTopic,
-		zkNodes,
-		kfkConf,
-	)
-	if err != nil {
-		log.Fatalln(err)
+	// signal handler will reopen logfile on USR2 if requested
+	if twConf.Log.Rotate {
+		sigChanLogRotate := make(chan os.Signal, 1)
+		signal.Notify(sigChanLogRotate, syscall.SIGUSR2)
+		go erebos.Logrotate(sigChanLogRotate, twConf)
 	}
 
+	// setup signal receiver for graceful shutdown
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, os.Kill)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	// this channel is closed by the handler on error
-	handlerDeath := make(chan struct{})
+	// this channel is used by the handlers on error
+	handlerDeath := make(chan error)
+	// this channel is used to signal the consumer to stop
+	consumerShutdown := make(chan struct{})
 
-	offsets := make(map[string]map[int32]int64)
-	handlers := make(map[int]twister.Twister)
-
+	// start application handlers
 	for i := 0; i < runtime.NumCPU(); i++ {
 		h := twister.Twister{
 			Num: i,
@@ -72,71 +82,52 @@ func main() {
 			Death:    handlerDeath,
 			Config:   &twConf,
 		}
-		handlers[i] = h
+		twister.Handlers[i] = &h
 		go h.Start()
+		logrus.Infof("Launched Twister handler #%d", i)
 	}
 
-	fault := false
-	heartbeat := time.Tick(1 * time.Second)
+	// start kafka consumer
+	go erebos.Consumer(
+		&twConf,
+		twister.Dispatch,
+		consumerShutdown,
+		handlerDeath,
+	)
 
+	// the main loop
 runloop:
 	for {
 		select {
 		case <-c:
-			for i := range handlers {
-				close(handlers[i].Shutdown)
-			}
+			logrus.Infoln(`Received shutdown signal`)
 			break runloop
-		case <-handlerDeath:
-			for i := range handlers {
-				close(handlers[i].Shutdown)
-			}
+		case err := <-handlerDeath:
+			logrus.Errorf("Handler died: %s", err.Error())
 			break runloop
-		case <-heartbeat:
-			continue runloop
-		case e := <-consumer.Errors():
-			log.Println(e)
-			fault = true
-			break runloop
-		case msg := <-consumer.Messages():
-			if offsets[msg.Topic] == nil {
-				offsets[msg.Topic] = make(map[int32]int64)
-			}
-
-			if offsets[msg.Topic][msg.Partition] != 0 &&
-				offsets[msg.Topic][msg.Partition] != msg.Offset-1 {
-				// incorrect offset
-				log.Printf("Unexpected offset on %s:%d. "+
-					"Expected %d, found %d.\n",
-					msg.Topic,
-					msg.Partition,
-					offsets[msg.Topic][msg.Partition]+1,
-					msg.Offset,
-				)
-			}
-
-			// send all messages from the same host to the same handler
-			// to keep the ordering intact
-			hostID, err := legacy.PeekHostID(msg.Value)
-			if err != nil {
-				log.Println(err)
-				fault = true
-				break runloop
-			}
-			handlers[hostID%runtime.NumCPU()].Input <- msg.Value
-
-			offsets[msg.Topic][msg.Partition] = msg.Offset
-			consumer.CommitUpto(msg)
 		}
 	}
-	if err := consumer.Close(); err != nil {
-		log.Println(`Error closing the consumer:`, err)
+
+	for i := range twister.Handlers {
+		close(twister.Handlers[i].ShutdownChannel())
 	}
-	if fault {
-		// let the service supervisor know the shutdown was not
-		// planned
-		os.Exit(1)
+	close(consumerShutdown)
+
+	// read all additional handler errors if required
+drainloop:
+	for {
+		select {
+		case err := <-handlerDeath:
+			logrus.Errorf("Handler died: %s", err.Error())
+		case <-time.After(time.Millisecond * 10):
+			break drainloop
+		}
 	}
+
+	// give goroutines that were blocked on handlerDeath channel
+	// a chance to exit
+	<-time.After(time.Millisecond * 10)
+	logrus.Infoln(`TWISTER shutdown complete`)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix
