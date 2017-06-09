@@ -24,7 +24,14 @@ func Consumer(conf *Config, dispatch Dispatcher,
 	shutdown chan struct{}, death chan error) {
 
 	kfkConf := consumergroup.NewConfig()
-	kfkConf.Offsets.Initial = sarama.OffsetNewest
+	switch conf.Kafka.ConsumerOffsetStrategy {
+	case `Oldest`, `oldest`:
+		kfkConf.Offsets.Initial = sarama.OffsetOldest
+	case `Newest`, `newest`:
+		kfkConf.Offsets.Initial = sarama.OffsetNewest
+	default:
+		kfkConf.Offsets.Initial = sarama.OffsetNewest
+	}
 	kfkConf.Offsets.ProcessingTimeout = 10 * time.Second
 	kfkConf.Offsets.CommitInterval = time.Duration(
 		conf.Zookeeper.CommitInterval,

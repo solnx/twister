@@ -47,6 +47,8 @@ type Config struct {
 		ConsumerGroup string `json:"consumer.group.name"`
 		// Which topics to consume from
 		ConsumerTopics string `json:"consumer.topics"`
+		// Where to start consuming: Oldest, Newest
+		ConsumerOffsetStrategy string `json:"consumer.offset.strategy"`
 		// Which topic to produce to
 		ProducerTopic string `json:"producer.topic"`
 		// Producer-Response behaviour: NoResponse, WaitForLocal or WaitForAll
