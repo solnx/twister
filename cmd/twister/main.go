@@ -10,6 +10,7 @@ package main // import "github.com/mjolnir42/twister/cmd/twister"
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -22,6 +23,7 @@ import (
 	"github.com/client9/reopen"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/twister/lib/twister"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 func init() {
@@ -72,6 +74,11 @@ func main() {
 	// this channel is used to signal the consumer to stop
 	consumerShutdown := make(chan struct{})
 
+	// setup metrics
+	pfxRegistry := metrics.NewPrefixedRegistry(`twister`)
+	metrics.NewRegisteredMeter(`.input.messages`, pfxRegistry)
+	metrics.NewRegisteredMeter(`.output.messages`, pfxRegistry)
+
 	// start application handlers
 	for i := 0; i < runtime.NumCPU(); i++ {
 		h := twister.Twister{
@@ -81,6 +88,7 @@ func main() {
 			Shutdown: make(chan struct{}),
 			Death:    handlerDeath,
 			Config:   &twConf,
+			Metrics:  &pfxRegistry,
 		}
 		twister.Handlers[i] = &h
 		go h.Start()
@@ -95,6 +103,9 @@ func main() {
 		handlerDeath,
 	)
 
+	// metrics beat
+	beat := time.NewTicker(10 * time.Second)
+
 	// the main loop
 runloop:
 	for {
@@ -105,6 +116,8 @@ runloop:
 		case err := <-handlerDeath:
 			logrus.Errorf("Handler died: %s", err.Error())
 			break runloop
+		case <-beat.C:
+			pfxRegistry.Each(printMetrics)
 		}
 	}
 
@@ -128,6 +141,14 @@ drainloop:
 	// a chance to exit
 	<-time.After(time.Millisecond * 10)
 	logrus.Infoln(`TWISTER shutdown complete`)
+}
+
+func printMetrics(metric string, v interface{}) {
+	switch v.(type) {
+	case *metrics.StandardMeter:
+		value := v.(*metrics.StandardMeter)
+		fmt.Fprintf(os.Stderr, "%s.avg.rate.1min: %f\n", metric, value.Rate1())
+	}
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

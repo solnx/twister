@@ -16,6 +16,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/legacy"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 // Handlers is the registry of running application handlers
@@ -34,10 +35,13 @@ type Twister struct {
 	Config   *erebos.Config
 	dispatch chan<- *sarama.ProducerMessage
 	producer sarama.AsyncProducer
+	Metrics  *metrics.Registry
 }
 
 // run is the event loop for Twister
 func (t *Twister) run() {
+	in := metrics.GetOrRegisterMeter(`.input.messages`, *t.Metrics)
+
 	// required during shutdown
 	inputEmpty := false
 	errorEmpty := false
@@ -61,6 +65,7 @@ runloop:
 				continue runloop
 			}
 			t.process(msg)
+			in.Mark(1)
 		}
 	}
 	// shutdown due to producer error
@@ -101,6 +106,7 @@ drainloop:
 // process is the handler for converting a MetricBatch
 // and producing the result
 func (t *Twister) process(msg []byte) {
+	out := metrics.GetOrRegisterMeter(`.output.messages`, *t.Metrics)
 	batch := legacy.MetricBatch{}
 	if err := json.Unmarshal(msg, &batch); err != nil {
 		logrus.Warnf("Ignoring invalid data: %s", err.Error())
@@ -122,6 +128,7 @@ func (t *Twister) process(msg []byte) {
 			),
 			Value: sarama.ByteEncoder(data),
 		}
+		out.Mark(1)
 	}
 }
 
