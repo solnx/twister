@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/mjolnir42/erebos"
 	kazoo "github.com/wvanbergen/kazoo-go"
 )
 
@@ -86,7 +87,7 @@ func (t *Twister) Start() {
 }
 
 // InputChannel returns the data input channel
-func (t *Twister) InputChannel() chan []byte {
+func (t *Twister) InputChannel() chan *erebos.Transport {
 	return t.Input
 }
 

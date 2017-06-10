@@ -8,11 +8,12 @@
 
 package erebos
 
-// Handler represents an erebos compatible application handler
-type Handler interface {
-	Start()
-	InputChannel() chan *Transport
-	ShutdownChannel() chan struct{}
+// Transport is a small wrapper struct for byte values with a return
+// error channel and metadata
+type Transport struct {
+	HostID int
+	Value  []byte
+	Return chan error
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

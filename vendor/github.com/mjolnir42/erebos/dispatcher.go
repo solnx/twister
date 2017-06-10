@@ -10,6 +10,6 @@ package erebos
 
 // Dispatcher receives the data and routes it to the correct
 // application handler
-type Dispatcher func([]byte) error
+type Dispatcher func(Transport) error
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

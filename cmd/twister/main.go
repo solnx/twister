@@ -73,6 +73,8 @@ func main() {
 	handlerDeath := make(chan error)
 	// this channel is used to signal the consumer to stop
 	consumerShutdown := make(chan struct{})
+	// this channel will be closed by the consumer
+	consumerExit := make(chan struct{})
 
 	// setup metrics
 	pfxRegistry := metrics.NewPrefixedRegistry(`twister`)
@@ -83,7 +85,7 @@ func main() {
 	for i := 0; i < runtime.NumCPU(); i++ {
 		h := twister.Twister{
 			Num: i,
-			Input: make(chan []byte,
+			Input: make(chan *erebos.Transport,
 				twConf.Twister.HandlerQueueLength),
 			Shutdown: make(chan struct{}),
 			Death:    handlerDeath,
@@ -100,6 +102,7 @@ func main() {
 		&twConf,
 		twister.Dispatch,
 		consumerShutdown,
+		consumerExit,
 		handlerDeath,
 	)
 
@@ -121,10 +124,12 @@ runloop:
 		}
 	}
 
+	// close all handlers
+	close(consumerShutdown)
+	<-consumerExit // not safe to close InputChannel before consumer is gone
 	for i := range twister.Handlers {
 		close(twister.Handlers[i].ShutdownChannel())
 	}
-	close(consumerShutdown)
 
 	// read all additional handler errors if required
 drainloop:

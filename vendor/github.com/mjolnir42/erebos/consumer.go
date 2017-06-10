@@ -21,7 +21,7 @@ import (
 // Consumer is a Kafka Consumergroup consumer that sends received
 // messages to a Dispatcher
 func Consumer(conf *Config, dispatch Dispatcher,
-	shutdown chan struct{}, death chan error) {
+	shutdown, exit chan struct{}, death chan error) {
 
 	kfkConf := consumergroup.NewConfig()
 	switch conf.Kafka.ConsumerOffsetStrategy {
@@ -81,7 +81,7 @@ runloop:
 					msg.Offset,
 				)
 			}
-			dispatch(msg.Value)
+			dispatch(Transport{Value: msg.Value})
 
 			offsets[msg.Topic][msg.Partition] = msg.Offset
 			consumer.CommitUpto(msg)
@@ -94,6 +94,7 @@ runloop:
 	}
 	// in the error case, wait for the shutdown
 	<-shutdown
+	close(exit)
 }
 
 // vim: ts=4 sw=4 sts=4 noet fenc=utf-8 ffs=unix

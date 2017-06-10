@@ -29,7 +29,7 @@ func init() {
 // Twister splits up read metric batches and produces the result
 type Twister struct {
 	Num      int
-	Input    chan []byte
+	Input    chan *erebos.Transport
 	Shutdown chan struct{}
 	Death    chan error
 	Config   *erebos.Config
@@ -105,10 +105,10 @@ drainloop:
 
 // process is the handler for converting a MetricBatch
 // and producing the result
-func (t *Twister) process(msg []byte) {
+func (t *Twister) process(msg *erebos.Transport) {
 	out := metrics.GetOrRegisterMeter(`.output.messages`, *t.Metrics)
 	batch := legacy.MetricBatch{}
-	if err := json.Unmarshal(msg, &batch); err != nil {
+	if err := json.Unmarshal(msg.Value, &batch); err != nil {
 		logrus.Warnf("Ignoring invalid data: %s", err.Error())
 		return
 	}

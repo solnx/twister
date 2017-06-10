@@ -11,19 +11,21 @@ package twister // import "github.com/mjolnir42/twister/lib/twister"
 import (
 	"runtime"
 
+	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/legacy"
 )
 
 // Dispatch implements erebos.Dispatcher
-func Dispatch(msg []byte) error {
+func Dispatch(msg erebos.Transport) error {
 	// send all messages from the same host to the same
 	// handler to keep the ordering intact
-	hostID, err := legacy.PeekHostID(msg)
+	hostID, err := legacy.PeekHostID(msg.Value)
 	if err != nil {
 		return err
 	}
+	msg.HostID = hostID
 
-	Handlers[hostID%runtime.NumCPU()].InputChannel() <- msg
+	Handlers[hostID%runtime.NumCPU()].InputChannel() <- &msg
 	return nil
 }
 
