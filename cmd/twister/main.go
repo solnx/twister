@@ -138,6 +138,7 @@ runloop:
 	<-consumerExit // not safe to close InputChannel before consumer is gone
 	for i := range twister.Handlers {
 		close(twister.Handlers[i].ShutdownChannel())
+		close(twister.Handlers[i].InputChannel())
 	}
 
 	// read all additional handler errors if required
