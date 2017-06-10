@@ -22,6 +22,12 @@ import (
 
 // Start sets up the Twister application
 func (t *Twister) Start() {
+	if len(Handlers) == 0 {
+		t.Death <- fmt.Errorf(`Incorrectly set handlers`)
+		<-t.Shutdown
+		return
+	}
+
 	kz, err := kazoo.NewKazooFromConnectionString(
 		t.Config.Zookeeper.Connect, nil)
 	if err != nil {
