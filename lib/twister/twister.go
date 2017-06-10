@@ -69,7 +69,6 @@ runloop:
 		}
 	}
 	// shutdown due to producer error
-	producerClosed = true
 	t.producer.Close()
 	return
 
