@@ -80,6 +80,19 @@ func main() {
 	pfxRegistry := metrics.NewPrefixedRegistry(`twister`)
 	metrics.NewRegisteredMeter(`.input.messages`, pfxRegistry)
 	metrics.NewRegisteredMeter(`.output.messages`, pfxRegistry)
+	metricShutdown := make(chan struct{})
+
+	go func(r *metrics.Registry) {
+		beat := time.NewTicker(10 * time.Second)
+		for {
+			select {
+			case <-beat.C:
+				(*r).Each(printMetrics)
+			case <-metricShutdown:
+				break
+			}
+		}
+	}(&pfxRegistry)
 
 	// start application handlers
 	for i := 0; i < runtime.NumCPU(); i++ {
@@ -106,9 +119,6 @@ func main() {
 		handlerDeath,
 	)
 
-	// metrics beat
-	beat := time.NewTicker(10 * time.Second)
-
 	// the main loop
 runloop:
 	for {
@@ -119,12 +129,11 @@ runloop:
 		case err := <-handlerDeath:
 			logrus.Errorf("Handler died: %s", err.Error())
 			break runloop
-		case <-beat.C:
-			pfxRegistry.Each(printMetrics)
 		}
 	}
 
 	// close all handlers
+	close(metricShutdown)
 	close(consumerShutdown)
 	<-consumerExit // not safe to close InputChannel before consumer is gone
 	for i := range twister.Handlers {
