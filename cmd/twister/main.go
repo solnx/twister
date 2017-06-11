@@ -11,7 +11,6 @@ package main // import "github.com/mjolnir42/twister/cmd/twister"
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -44,7 +43,7 @@ func main() {
 	// read runtime configuration
 	twConf := erebos.Config{}
 	if err := twConf.FromFile(cliConfPath); err != nil {
-		log.Fatalln(err)
+		logrus.Fatalf("Could not open configuration: %s", err)
 	}
 
 	// setup logfile
