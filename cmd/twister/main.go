@@ -120,6 +120,7 @@ func main() {
 	)
 
 	// the main loop
+	fault := false
 runloop:
 	for {
 		select {
@@ -128,6 +129,7 @@ runloop:
 			break runloop
 		case err := <-handlerDeath:
 			logrus.Errorf("Handler died: %s", err.Error())
+			fault = true
 			break runloop
 		}
 	}
@@ -156,6 +158,9 @@ drainloop:
 	// a chance to exit
 	<-time.After(time.Millisecond * 10)
 	logrus.Infoln(`TWISTER shutdown complete`)
+	if fault {
+		os.Exit(1)
+	}
 }
 
 func printMetrics(metric string, v interface{}) {
