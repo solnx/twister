@@ -87,6 +87,7 @@ drainloop:
 				if inputEmpty && errorEmpty {
 					break drainloop
 				}
+				continue drainloop
 			}
 			t.process(msg)
 		case e := <-t.producer.Errors():
