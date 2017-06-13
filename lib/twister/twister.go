@@ -106,6 +106,10 @@ drainloop:
 // process is the handler for converting a MetricBatch
 // and producing the result
 func (t *Twister) process(msg *erebos.Transport) {
+	if msg == nil || msg.Value == nil {
+		logrus.Warnf("Ignoring empty message from: %d", msg.HostID)
+		return
+	}
 	out := metrics.GetOrRegisterMeter(`.output.messages`, *t.Metrics)
 	batch := legacy.MetricBatch{}
 	if err := json.Unmarshal(msg.Value, &batch); err != nil {
