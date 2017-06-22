@@ -10,6 +10,7 @@ package main // import "github.com/mjolnir42/twister/cmd/twister"
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -76,7 +77,14 @@ func main() {
 	consumerExit := make(chan struct{})
 
 	// setup metrics
-	pfxRegistry := metrics.NewPrefixedRegistry(`/twister`)
+	var metricPrefix string
+	switch twConf.Misc.InstanceName {
+	case ``:
+		metricPrefix = `/twister`
+	default:
+		metricPrefix = fmt.Sprintf("/twister/%s", twConf.Misc.InstanceName)
+	}
+	pfxRegistry := metrics.NewPrefixedRegistry(metricPrefix)
 	metrics.NewRegisteredMeter(`/input/messages`, pfxRegistry)
 	metrics.NewRegisteredMeter(`/output/messages`, pfxRegistry)
 
