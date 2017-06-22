@@ -7,6 +7,7 @@
  */
 
 package twister // import "github.com/mjolnir42/twister/lib/twister"
+
 import (
 	"fmt"
 
@@ -14,7 +15,7 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 )
 
-// FormatMetrics is the formatting function to export Mistral metrics
+// FormatMetrics is the formatting function to export Twister metrics
 // via legacy.MetricSocket, implementing legacy.Formatter
 func FormatMetrics(batch *legacy.PluginMetricBatch) func(string, interface{}) {
 	return func(metric string, v interface{}) {
