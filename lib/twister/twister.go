@@ -104,16 +104,21 @@ drainloop:
 }
 
 // process is the handler for converting a MetricBatch
-// and producing the result
+// and producing the result. Invalid data is marked as processed
+// and skipped.
 func (t *Twister) process(msg *erebos.Transport) {
 	if msg == nil || msg.Value == nil {
 		logrus.Warnf("Ignoring empty message from: %d", msg.HostID)
+		if msg != nil {
+			go t.commit(msg)
+		}
 		return
 	}
 	out := metrics.GetOrRegisterMeter(`/output/messages`, *t.Metrics)
 	batch := legacy.MetricBatch{}
 	if err := json.Unmarshal(msg.Value, &batch); err != nil {
 		logrus.Warnf("Ignoring invalid data: %s", err.Error())
+		go t.commit(msg)
 		return
 	}
 
@@ -122,6 +127,7 @@ func (t *Twister) process(msg *erebos.Transport) {
 		data, err := json.Marshal(&msgs[i])
 		if err != nil {
 			logrus.Warnf("Ignoring invalid data: %s", err.Error())
+			go t.commit(msg)
 			return
 		}
 
@@ -133,6 +139,16 @@ func (t *Twister) process(msg *erebos.Transport) {
 			Value: sarama.ByteEncoder(data),
 		}
 		out.Mark(1)
+		go t.commit(msg)
+	}
+}
+
+// commit marks a message as fully processed
+func (t *Twister) commit(msg *erebos.Transport) {
+	msg.Commit <- &erebos.Commit{
+		Topic:     msg.Topic,
+		Partition: msg.Partition,
+		Offset:    msg.Offset,
 	}
 }
 
