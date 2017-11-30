@@ -104,6 +104,7 @@ func main() {
 	metrics.NewRegisteredMeter(`/output/messages`, pfxRegistry)
 
 	ms := legacy.NewMetricSocket(&twConf, &pfxRegistry, handlerDeath, twister.FormatMetrics)
+	ms.SetDebugFormatter(twister.DebugFormatMetrics)
 	if twConf.Misc.ProduceMetrics {
 		logrus.Info(`Launched metrics producer socket`)
 		go ms.Run()
