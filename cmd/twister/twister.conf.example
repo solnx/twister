@@ -1,0 +1,20 @@
+log: {
+  file: twister.log
+  rotate.on.usr2: true
+}
+zookeeper: {
+  commit.ms: 2000
+  connect.string: 'localhost:2181/kafka'
+  reset.offset.on.startup: true
+}
+kafka: {
+  consumer.group.name: twister_instance
+  consumer.topics: mistral
+  producer.topic: twister
+  producer.response.strategy: WaitForLocal
+  producer.retry.attempts: 4
+  keepalive.ms: 4200
+}
+twister: {
+  handler.queue.length: 16
+}
