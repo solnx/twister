@@ -100,8 +100,8 @@ func main() {
 		metricPrefix = fmt.Sprintf("/twister/%s", twConf.Misc.InstanceName)
 	}
 	pfxRegistry := metrics.NewPrefixedRegistry(metricPrefix)
-	metrics.NewRegisteredMeter(`/input/messages`, pfxRegistry)
-	metrics.NewRegisteredMeter(`/output/messages`, pfxRegistry)
+	metrics.NewRegisteredMeter(`/input/messages.per.second`, pfxRegistry)
+	metrics.NewRegisteredMeter(`/output/messages.per.second`, pfxRegistry)
 
 	ms := legacy.NewMetricSocket(&twConf, &pfxRegistry, handlerDeath, twister.FormatMetrics)
 	ms.SetDebugFormatter(twister.DebugFormatMetrics)
