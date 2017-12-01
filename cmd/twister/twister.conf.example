@@ -1,10 +1,11 @@
 log: {
+  path: /srv/twister/instance/log
   file: twister.log
   rotate.on.usr2: true
 }
 zookeeper: {
   commit.ms: 2000
-  connect.string: 'localhost:2181/kafka'
+  connect.string: 'zk-server01:2181,zk-server02:2181/chroot/kafka'
   reset.offset.on.startup: true
 }
 kafka: {
@@ -17,4 +18,12 @@ kafka: {
 }
 twister: {
   handler.queue.length: 16
+}
+misc: {
+  produce.metrics: true
+}
+legacy: {
+  socket.path: /run/twister.seqpacket
+  metrics.debug.stderr: false
+  metrics.debug.frequency.seconds: 30
 }
