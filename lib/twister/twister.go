@@ -40,7 +40,7 @@ type Twister struct {
 
 // run is the event loop for Twister
 func (t *Twister) run() {
-	in := metrics.GetOrRegisterMeter(`/input/messages`, *t.Metrics)
+	in := metrics.GetOrRegisterMeter(`/input/messages.per.second`, *t.Metrics)
 
 	// required during shutdown
 	inputEmpty := false
@@ -114,7 +114,7 @@ func (t *Twister) process(msg *erebos.Transport) {
 		}
 		return
 	}
-	out := metrics.GetOrRegisterMeter(`/output/messages`, *t.Metrics)
+	out := metrics.GetOrRegisterMeter(`/output/messages.per.second`, *t.Metrics)
 	batch := legacy.MetricBatch{}
 	if err := json.Unmarshal(msg.Value, &batch); err != nil {
 		logrus.Warnf("Ignoring invalid data: %s", err.Error())
