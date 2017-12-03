@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package twister // import "github.com/mjolnir42/twister/lib/twister"
+package twister // import "github.com/mjolnir42/twister/internal/twister"
 
 import (
 	"runtime"

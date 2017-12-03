@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package twister // import "github.com/mjolnir42/twister/lib/twister"
+package twister // import "github.com/mjolnir42/twister/internal/twister"
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
 	kazoo "github.com/wvanbergen/kazoo-go"
 )
@@ -72,6 +73,11 @@ func (t *Twister) Start() {
 	default:
 		config.Producer.RequiredAcks = sarama.WaitForLocal
 	}
+
+	// set return parameters
+	config.Producer.Return.Errors = true
+	config.Producer.Return.Successes = true
+
 	// set how often to retry producing
 	switch t.Config.Kafka.ProducerRetry {
 	case 0:
@@ -82,6 +88,9 @@ func (t *Twister) Start() {
 	config.Producer.Partitioner = sarama.NewHashPartitioner
 	config.ClientID = fmt.Sprintf("twister.%s", host)
 
+	t.trackID = make(map[string]int)
+	t.trackACK = make(map[string][]*erebos.Transport)
+
 	t.producer, err = sarama.NewAsyncProducer(brokers, config)
 	if err != nil {
 		t.Death <- err
@@ -89,6 +98,8 @@ func (t *Twister) Start() {
 		return
 	}
 	t.dispatch = t.producer.Input()
+	t.delay = delay.NewDelay()
+
 	t.run()
 }
 
