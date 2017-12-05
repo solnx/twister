@@ -16,6 +16,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
+	"github.com/mjolnir42/eyewall"
 	kazoo "github.com/wvanbergen/kazoo-go"
 )
 
@@ -99,6 +100,19 @@ func (t *Twister) Start() {
 	}
 	t.dispatch = t.producer.Input()
 	t.delay = delay.NewDelay()
+
+	t.lookup = eyewall.NewLookup(t.Config)
+	if err = t.lookup.Start(); err != nil {
+		t.Death <- err
+		<-t.Shutdown
+		return
+	}
+	defer t.lookup.Close()
+
+	t.lookKeys = make(map[string]bool)
+	for _, path := range t.Config.Twister.QueryMetrics {
+		t.lookKeys[path] = true
+	}
 
 	t.run()
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
+	"github.com/mjolnir42/eyewall"
 	"github.com/mjolnir42/legacy"
 	uuid "github.com/satori/go.uuid"
 )
@@ -52,6 +53,18 @@ func (t *Twister) process(msg *erebos.Transport) {
 	msgs := batch.Split()
 	for i := range msgs {
 
+		if t.lookKeys[msgs[i].Path] {
+			if tag, err := t.lookup.GetConfigurationID(
+				msgs[i].LookupID(),
+				msgs[i].Path,
+			); err == nil {
+				msgs[i].Tags = append(msgs[i].Tags, tag)
+			} else if err != eyewall.ErrUnconfigured {
+				t.Death <- err
+				<-t.Shutdown
+				return
+			}
+		}
 		data, err := json.Marshal(&msgs[i])
 		if err != nil {
 			logrus.Warnf("Ignoring invalid data: %s", err.Error())
