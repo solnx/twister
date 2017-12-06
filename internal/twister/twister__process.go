@@ -54,11 +54,10 @@ func (t *Twister) process(msg *erebos.Transport) {
 	for i := range msgs {
 
 		if t.lookKeys[msgs[i].Path] {
-			if tag, err := t.lookup.GetConfigurationID(
+			if tags, err := t.lookup.GetConfigurationID(
 				msgs[i].LookupID(),
-				msgs[i].Path,
 			); err == nil {
-				msgs[i].Tags = append(msgs[i].Tags, tag)
+				msgs[i].Tags = append(msgs[i].Tags, tags...)
 			} else if err != eyewall.ErrUnconfigured {
 				t.Death <- err
 				<-t.Shutdown
