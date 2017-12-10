@@ -10,6 +10,7 @@ package twister // import "github.com/mjolnir42/twister/internal/twister"
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/Shopify/sarama"
@@ -33,6 +34,24 @@ func (t *Twister) process(msg *erebos.Transport) {
 				t.delay.Done()
 			}()
 		}
+		return
+	}
+
+	// handle heartbeat messages
+	if erebos.IsHeartbeat(msg) {
+		t.delay.Use()
+		go func() {
+			t.lookup.Heartbeat(func() string {
+				switch t.Config.Misc.InstanceName {
+				case ``:
+					return `twister`
+				default:
+					return fmt.Sprintf("twister/%s",
+						t.Config.Misc.InstanceName)
+				}
+			}(), t.Num, msg.Value)
+			t.delay.Done()
+		}()
 		return
 	}
 
