@@ -99,7 +99,7 @@ func (t *Twister) Start() {
 		return
 	}
 	t.dispatch = t.producer.Input()
-	t.delay = delay.NewDelay()
+	t.delay = delay.New()
 
 	t.lookup = eyewall.NewLookup(t.Config)
 	if err = t.lookup.Start(); err != nil {
