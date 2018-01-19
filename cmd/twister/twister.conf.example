@@ -16,9 +16,24 @@ kafka: {
   producer.retry.attempts: 4
   keepalive.ms: 4200
 }
+
+# settings relating to the twister application
 twister: {
+  # internal handler queue length
   handler.queue.length: 16
+  # for which metrics should twister look up monitoring profiles
+  query.metric.profiles: [
+    '/sys/cpu/blocked',
+    '/sys/cpu/uptime',
+    '/sys/load/300s',
+    '/sys/load/60s',
+    '/sys/load/900s',
+    '/sys/load/running_proc',
+    '/sys/load/total_proc',
+    '/sys/net/speed',
+  ]
 }
+
 misc: {
   produce.metrics: true
 }
@@ -26,4 +41,19 @@ legacy: {
   socket.path: /run/twister.seqpacket
   metrics.debug.stderr: false
   metrics.debug.frequency.seconds: 30
+}
+
+# settings relating to the profile lookup server eye
+eyewall: {
+  host: 'eye.example.org'
+  port: 333
+  path: 'api/v1/configuration'
+}
+
+# settings relating to the redis profile cache
+redis: {
+  connect: 'localhost:6379'
+  db.number: '0'
+  password: 'sikrit'
+  cache.timeout.seconds: 1800
 }

@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package twister // import "github.com/mjolnir42/twister/lib/twister"
+package twister // import "github.com/mjolnir42/twister/internal/twister"
 
 import (
 	"fmt"
@@ -15,6 +15,8 @@ import (
 	"github.com/mjolnir42/legacy"
 	metrics "github.com/rcrowley/go-metrics"
 )
+
+// Implementation of the legacy.Formatter interface
 
 // FormatMetrics is the formatting function to export Twister metrics
 // via legacy.MetricSocket, implementing legacy.Formatter

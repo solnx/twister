@@ -20,9 +20,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/client9/reopen"
+	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/legacy"
-	"github.com/mjolnir42/twister/lib/twister"
+	"github.com/mjolnir42/twister/internal/twister"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -44,40 +45,42 @@ func main() {
 	)
 	flag.StringVar(&cliConfPath, `config`, `twister.conf`,
 		`Configuration file location`)
-	flag.BoolVar(&versionFlag, `version`, false, `Print version information`)
+	flag.BoolVar(&versionFlag, `version`, false,
+		`Print version information`)
 	flag.Parse()
 
 	// only provide version information if --version was specified
 	if versionFlag {
 		fmt.Fprintln(os.Stderr, `Twister Metric Splitter`)
-		fmt.Fprintf(os.Stderr, "Version  : %s-%s\n", builddate, shorthash)
+		fmt.Fprintf(os.Stderr, "Version  : %s-%s\n", builddate,
+			shorthash)
 		fmt.Fprintf(os.Stderr, "Git Hash : %s\n", githash)
 		fmt.Fprintf(os.Stderr, "Timestamp: %s\n", buildtime)
 		os.Exit(0)
 	}
 
 	// read runtime configuration
-	twConf := erebos.Config{}
-	if err := twConf.FromFile(cliConfPath); err != nil {
+	conf := erebos.Config{}
+	if err := conf.FromFile(cliConfPath); err != nil {
 		logrus.Fatalf("Could not open configuration: %s", err)
 	}
 
 	// setup logfile
 	if lfh, err := reopen.NewFileWriter(
-		filepath.Join(twConf.Log.Path, twConf.Log.File),
+		filepath.Join(conf.Log.Path, conf.Log.File),
 	); err != nil {
 		logrus.Fatalf("Unable to open logfile: %s", err)
 	} else {
-		twConf.Log.FH = lfh
+		conf.Log.FH = lfh
 	}
-	logrus.SetOutput(twConf.Log.FH)
+	logrus.SetOutput(conf.Log.FH)
 	logrus.Infoln(`Starting TWISTER...`)
 
 	// signal handler will reopen logfile on USR2 if requested
-	if twConf.Log.Rotate {
+	if conf.Log.Rotate {
 		sigChanLogRotate := make(chan os.Signal, 1)
 		signal.Notify(sigChanLogRotate, syscall.SIGUSR2)
-		go erebos.Logrotate(sigChanLogRotate, twConf)
+		go erebos.Logrotate(sigChanLogRotate, conf)
 	}
 
 	// setup signal receiver for graceful shutdown
@@ -91,23 +94,34 @@ func main() {
 	// this channel will be closed by the consumer
 	consumerExit := make(chan struct{})
 
+	// setup goroutine waiting policy
+	waitdelay := delay.NewDelay()
+
 	// setup metrics
 	var metricPrefix string
-	switch twConf.Misc.InstanceName {
+	switch conf.Misc.InstanceName {
 	case ``:
 		metricPrefix = `/twister`
 	default:
-		metricPrefix = fmt.Sprintf("/twister/%s", twConf.Misc.InstanceName)
+		metricPrefix = fmt.Sprintf("/twister/%s",
+			conf.Misc.InstanceName)
 	}
 	pfxRegistry := metrics.NewPrefixedRegistry(metricPrefix)
-	metrics.NewRegisteredMeter(`/input/messages.per.second`, pfxRegistry)
-	metrics.NewRegisteredMeter(`/output/messages.per.second`, pfxRegistry)
+	metrics.NewRegisteredMeter(`/input/messages.per.second`,
+		pfxRegistry)
+	metrics.NewRegisteredMeter(`/output/messages.per.second`,
+		pfxRegistry)
 
-	ms := legacy.NewMetricSocket(&twConf, &pfxRegistry, handlerDeath, twister.FormatMetrics)
+	ms := legacy.NewMetricSocket(&conf, &pfxRegistry, handlerDeath,
+		twister.FormatMetrics)
 	ms.SetDebugFormatter(twister.DebugFormatMetrics)
-	if twConf.Misc.ProduceMetrics {
+	if conf.Misc.ProduceMetrics {
 		logrus.Info(`Launched metrics producer socket`)
-		go ms.Run()
+		waitdelay.Use()
+		go func() {
+			defer waitdelay.Done()
+			ms.Run()
+		}()
 	}
 
 	// start application handlers
@@ -115,25 +129,35 @@ func main() {
 		h := twister.Twister{
 			Num: i,
 			Input: make(chan *erebos.Transport,
-				twConf.Twister.HandlerQueueLength),
+				conf.Twister.HandlerQueueLength),
 			Shutdown: make(chan struct{}),
 			Death:    handlerDeath,
-			Config:   &twConf,
+			Config:   &conf,
 			Metrics:  &pfxRegistry,
 		}
 		twister.Handlers[i] = &h
-		go h.Start()
+		waitdelay.Use()
+		go func() {
+			defer waitdelay.Done()
+			h.Start()
+		}()
 		logrus.Infof("Launched Twister handler #%d", i)
 	}
 
 	// start kafka consumer
-	go erebos.Consumer(
-		&twConf,
-		twister.Dispatch,
-		consumerShutdown,
-		consumerExit,
-		handlerDeath,
-	)
+	waitdelay.Use()
+	go func() {
+		defer waitdelay.Done()
+		erebos.Consumer(
+			&conf,
+			twister.Dispatch,
+			consumerShutdown,
+			consumerExit,
+			handlerDeath,
+		)
+	}()
+
+	heartbeat := time.Tick(10 * time.Second)
 
 	// the main loop
 	fault := false
@@ -149,13 +173,24 @@ runloop:
 			logrus.Errorf("Handler died: %s", err.Error())
 			fault = true
 			break runloop
+		case <-heartbeat:
+			for i := range twister.Handlers {
+				// do not block on heartbeats
+				waitdelay.Use()
+				go func(i int) {
+					twister.Handlers[i].InputChannel() <- erebos.NewHeartbeat()
+					waitdelay.Done()
+				}(i)
+			}
 		}
 	}
 
 	// close all handlers
 	close(ms.Shutdown)
 	close(consumerShutdown)
-	<-consumerExit // not safe to close InputChannel before consumer is gone
+
+	// not safe to close InputChannel before consumer is gone
+	<-consumerExit
 	for i := range twister.Handlers {
 		close(twister.Handlers[i].ShutdownChannel())
 		close(twister.Handlers[i].InputChannel())
@@ -176,7 +211,7 @@ drainloop:
 
 	// give goroutines that were blocked on handlerDeath channel
 	// a chance to exit
-	<-time.After(time.Millisecond * 10)
+	waitdelay.Wait()
 	logrus.Infoln(`TWISTER shutdown complete`)
 	if fault {
 		os.Exit(1)
