@@ -66,7 +66,8 @@ func (t *Twister) process(msg *erebos.Transport) {
 		return
 	}
 
-	trackingID := uuid.NewV4().String()
+	// panic on entropy error
+	trackingID := uuid.Must(uuid.NewV4()).String()
 	var produced int
 
 	msgs := batch.Split()
