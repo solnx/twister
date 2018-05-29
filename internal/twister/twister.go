@@ -14,7 +14,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eyewall"
+	wall "github.com/mjolnir42/eye/lib/eye.wall"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -41,7 +41,7 @@ type Twister struct {
 	trackACK map[string][]*erebos.Transport
 	dispatch chan<- *sarama.ProducerMessage
 	producer sarama.AsyncProducer
-	lookup   *eyewall.Lookup
+	lookup   *wall.Lookup
 	lookKeys map[string]bool
 }
 

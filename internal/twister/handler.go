@@ -16,7 +16,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eyewall"
+	wall "github.com/mjolnir42/eye/lib/eye.wall"
 	kazoo "github.com/wvanbergen/kazoo-go"
 )
 
@@ -101,7 +101,7 @@ func (t *Twister) Start() {
 	t.dispatch = t.producer.Input()
 	t.delay = delay.New()
 
-	t.lookup = eyewall.NewLookup(t.Config)
+	t.lookup = wall.NewLookup(t.Config, `twister`)
 	if err = t.lookup.Start(); err != nil {
 		t.Death <- err
 		<-t.Shutdown

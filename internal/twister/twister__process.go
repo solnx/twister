@@ -16,7 +16,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/eyewall"
+	wall "github.com/mjolnir42/eye/lib/eye.wall"
 	"github.com/mjolnir42/legacy"
 	uuid "github.com/satori/go.uuid"
 )
@@ -78,7 +78,7 @@ func (t *Twister) process(msg *erebos.Transport) {
 				msgs[i].LookupID(),
 			); err == nil {
 				msgs[i].Tags = append(msgs[i].Tags, tags...)
-			} else if err != eyewall.ErrUnconfigured {
+			} else if err != wall.ErrUnconfigured {
 				t.Death <- err
 				<-t.Shutdown
 				return
