@@ -7,15 +7,15 @@
  */
 
 // Package twister splits metric batches into individual metrics
-package twister // import "github.com/mjolnir42/twister/internal/twister"
+package twister // import "github.com/solnx/twister/internal/twister"
 
 import (
 	"github.com/Shopify/sarama"
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
-	wall "github.com/mjolnir42/eye/lib/eye.wall"
 	metrics "github.com/rcrowley/go-metrics"
+	wall "github.com/solnx/eye/lib/eye.wall"
 )
 
 // Handlers is the registry of running application handlers

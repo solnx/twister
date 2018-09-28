@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package twister // import "github.com/mjolnir42/twister/internal/twister"
+package twister // import "github.com/solnx/twister/internal/twister"
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
-	wall "github.com/mjolnir42/eye/lib/eye.wall"
+	wall "github.com/solnx/eye/lib/eye.wall"
 	kazoo "github.com/wvanbergen/kazoo-go"
 )
 

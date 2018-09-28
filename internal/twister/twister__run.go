@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package twister // import "github.com/mjolnir42/twister/internal/twister"
+package twister // import "github.com/solnx/twister/internal/twister"
 
 import (
 	"github.com/Sirupsen/logrus"

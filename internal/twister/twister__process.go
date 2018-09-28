@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package twister // import "github.com/mjolnir42/twister/internal/twister"
+package twister // import "github.com/solnx/twister/internal/twister"
 
 import (
 	"encoding/json"
@@ -16,9 +16,9 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
-	wall "github.com/mjolnir42/eye/lib/eye.wall"
 	"github.com/mjolnir42/legacy"
 	uuid "github.com/satori/go.uuid"
+	wall "github.com/solnx/eye/lib/eye.wall"
 )
 
 // process is the handler for converting a MetricBatch

@@ -6,7 +6,7 @@
  * that can be found in the LICENSE file.
  */
 
-package main // import "github.com/mjolnir42/twister/cmd/twister"
+package main // import "github.com/solnx/twister/cmd/twister"
 
 import (
 	"flag"
@@ -23,8 +23,8 @@ import (
 	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
 	"github.com/mjolnir42/legacy"
-	"github.com/mjolnir42/twister/internal/twister"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/solnx/twister/internal/twister"
 )
 
 var githash, shorthash, builddate, buildtime string
