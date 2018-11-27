@@ -16,9 +16,9 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Sirupsen/logrus"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/legacy"
 	uuid "github.com/satori/go.uuid"
 	wall "github.com/solnx/eye/lib/eye.wall"
+	"github.com/solnx/legacy"
 )
 
 // process is the handler for converting a MetricBatch

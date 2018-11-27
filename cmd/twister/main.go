@@ -22,8 +22,8 @@ import (
 	"github.com/client9/reopen"
 	"github.com/mjolnir42/delay"
 	"github.com/mjolnir42/erebos"
-	"github.com/mjolnir42/legacy"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/solnx/legacy"
 	"github.com/solnx/twister/internal/twister"
 )
 
