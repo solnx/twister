@@ -74,6 +74,17 @@ func (t *Twister) Start() {
 	default:
 		config.Producer.RequiredAcks = sarama.WaitForLocal
 	}
+	// set the configured compression for producing
+	switch m.Config.Kafka.ProducerCompressionCodec {
+	case `gzip`:
+		config.Producer.Compression = sarama.CompressionGZIP
+	case `snappy`:
+		config.Producer.Compression = sarama.CompressionSnappy
+	case `lz4`:
+		config.Producer.Compression = sarama.CompressionLZ4
+	default:
+		config.Producer.Compression = sarama.CompressionNone
+	}
 
 	// set return parameters
 	config.Producer.Return.Errors = true
